@@ -22,7 +22,7 @@ function CheckoutForm() {
     const { sessionId } = await response.json();
     
     // Redirect to Stripe Checkout
-    const stripe = window.Stripe(process.env.STRIPE_PUBLIC_KEY); // Replace with your actual publishable key
+    const stripe = window.Stripe('pk_test_51QBRpFICvmtDwewB0gmIXj01IEfYCvQYUEenHW2tb8fRfKdKwmREn33Xf4ElmKaBGZuNxDwNROk8LONdXAZVxEvY00PDuF8jgW'); // Replace with your actual publishable key
     const { error } = await stripe.redirectToCheckout({ sessionId });
 
     if (error) {
