@@ -1,0 +1,17 @@
+button{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  padding: 10px 10px;
+  background: rgb(0, 0, 0);
+  color: white;
+  outline: none;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover{
+  background: rgba(0, 0, 0, 0.835);
+}
