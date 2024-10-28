@@ -1,9 +1,8 @@
 import React from 'react';
-import 'dotenv/config'
 
 function CheckoutForm() {
   const handleCheckout = async () => {
-    const response = await fetch('https://54.162.201.2:8000/create-product-and-checkout-session', {
+    const response = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +20,6 @@ function CheckoutForm() {
     }
 
     const { sessionId } = await response.json();
-    console.log(sessionId);
     
     // Redirect to Stripe Checkout
     const stripe = window.Stripe(process.env.STRIPE_PUBLIC_KEY); // Replace with your actual publishable key
