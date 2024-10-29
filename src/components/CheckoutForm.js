@@ -20,19 +20,34 @@ function CheckoutForm() {
         requestPayerEmail: true,
       });
 
-      pr.on('token', async (event) => {
-        const response = await fetch('https://destiny-server-nhyk.onrender.com/charge', {
+      pr.on('token', async (e) => {
+        const { clientSecret } = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token: event.token.id }),
-        });
+          body: JSON.stringify({
+            paymentMethodType: 'card',
+            amount: 1000,
+            currency: 'usd',
+            name: 'Sample Product',
+            description: 'Description here',
+          }),
+        }).then(r => r.json());
 
-        if (response.ok) {
-          event.complete('success');
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret, 
+          { payment_method: e.paymentMethod.id }, 
+          { handleActions: false }
+        );
+
+        if (error) {
+          e.complete('fail');
         } else {
-          event.complete('fail');
+          e.complete('success');
+          if (paymentIntent.status === 'requires_action') {
+            await stripe.confirmCardPayment(clientSecret);
+          }
         }
       });
 
