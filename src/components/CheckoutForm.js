@@ -1,37 +1,60 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useStripe, useElements, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
 
 function CheckoutForm() {
-  const handleCheckout = async () => {
-    const response = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: "Sample Product",
-        description: "This is a sample product description.",
-        amount: 10, // Amount in USD ($10.00)
-      }),
-    });
+  const stripe = useStripe();
+  const elements = useElements();
+  const [paymentRequest, setPaymentRequest] = useState(null);
+  const [paymentRequestAvailable, setPaymentRequestAvailable] = useState(false);
 
-    if (!response.ok) {
-      console.error("Failed to create checkout session");
-      return;
+  useEffect(() => {
+    if (stripe) {
+      const pr = stripe.paymentRequest({
+        country: 'US',
+        currency: 'usd',
+        total: {
+          label: 'Sample Product',
+          amount: 1000, // Amount in cents ($10.00)
+        },
+        requestPayerName: true,
+        requestPayerEmail: true,
+      });
+
+      pr.on('token', async (event) => {
+        const response = await fetch('https://destiny-server-nhyk.onrender.com/charge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: event.token.id }),
+        });
+
+        if (response.ok) {
+          event.complete('success');
+        } else {
+          event.complete('fail');
+        }
+      });
+
+      pr.canMakePayment().then((result) => {
+        if (result) {
+          setPaymentRequest(pr);
+          setPaymentRequestAvailable(true);
+        } else {
+          setPaymentRequestAvailable(false);
+        }
+      });
     }
-
-    const { sessionId } = await response.json();
-    
-    // Redirect to Stripe Checkout
-    const stripe = window.Stripe('pk_test_51QBRpFICvmtDwewB0gmIXj01IEfYCvQYUEenHW2tb8fRfKdKwmREn33Xf4ElmKaBGZuNxDwNROk8LONdXAZVxEvY00PDuF8jgW'); // Replace with your actual publishable key
-    const { error } = await stripe.redirectToCheckout({ sessionId });
-
-    if (error) {
-      console.error("Error redirecting to checkout:", error);
-    }
-  };
+  }, [stripe]);
 
   return (
-    <button onClick={handleCheckout}>Pay Now</button>
+    <div>
+      {paymentRequestAvailable ? (
+        <PaymentRequestButtonElement options={{ paymentRequest }} />
+      ) : (
+        <p>Apple Pay is not available on this device.</p>
+      )}
+    </div>
   );
 }
 
