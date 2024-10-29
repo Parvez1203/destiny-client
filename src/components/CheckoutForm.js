@@ -64,17 +64,8 @@ function CheckoutForm() {
 
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',        // Center vertically in the viewport
-      width: '100vw',         // Full viewport width
-      padding: '20px',        // Padding around the button container
-      maxWidth: '300px',      // Set max width for the button container
-      margin: '0 auto',       // Center horizontally
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Subtle shadow for depth
-      borderRadius: '8px'     // Rounded corners for a nice look
-    }}>
+margin:'20px'    // Rounded corners for a nice look
+}}>
       {paymentRequestAvailable ? (
         <PaymentRequestButtonElement options={{ paymentRequest }} />
       ) : (
