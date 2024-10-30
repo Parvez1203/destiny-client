@@ -53,6 +53,8 @@ function Payment() {
         });
       });
     }
+    console.log(paymentRequest);
+    
   }, [stripePromise]);
 
   return (
