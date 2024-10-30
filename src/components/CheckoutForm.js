@@ -27,6 +27,16 @@ function CheckoutForm() {
         ],
       });
 
+      // Add shipping options
+      paymentRequest.on("shippingaddresschange", (event) => {
+        const shippingOptions = [
+          { id: "free-shipping", label: "Free Shipping", detail: "5-7 days", amount: 0 },
+          { id: "express-shipping", label: "Express Shipping", detail: "2-3 days", amount: 500 },
+        ];
+
+        event.updateWith({ status: "success", shippingOptions });
+      });
+
       pr.on('token', async (e) => {
         try {
           // Fetch client secret from your backend
