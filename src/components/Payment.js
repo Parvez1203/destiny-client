@@ -9,7 +9,7 @@ function Payment() {
   const [clientSecret, setClientSecret] = useState("");
 
   useEffect(() => {
-    fetch("/config").then(async (r) => {
+    fetch("https://destiny-server-nhyk.onrender.com/config").then(async (r) => {
       const { publishableKey } = await r.json();
       console.log(publishableKey);
       
