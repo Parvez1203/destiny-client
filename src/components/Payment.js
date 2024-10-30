@@ -84,7 +84,7 @@ function Payment() {
           const { publishableKey } = await r.json();
           setStripePromise(loadStripe(publishableKey));
         });
-      }, [stripePromise]);
+      }, []);
   return (
     <Elements stripe={stripePromise}>
       <CheckoutForm />
