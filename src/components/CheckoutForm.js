@@ -19,6 +19,7 @@ const CheckoutForm = () => {
         },
         requestPayerName: true,
         requestPayerEmail: true,
+        requestShipping: true, // Request shipping details
       });
 
       // Check if the Payment Request is supported
@@ -31,16 +32,16 @@ const CheckoutForm = () => {
       });
 
       request.on('token', async (event) => {
-        const { token } = event;
+        const { token, shipping } = event; // Get shipping details
 
         try {
-          // Send the token to your server for processing
+          // Send the token and shipping details to your server for processing
           const response = await fetch('https://destiny-server-nhyk.onrender.com/create-payment-intent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ token: token.id }),
+            body: JSON.stringify({ token: token.id, shipping }),
           });
 
           const data = await response.json();
@@ -62,6 +63,12 @@ const CheckoutForm = () => {
 
         // Complete the payment
         event.complete(success ? 'success' : 'fail');
+      });
+
+      // Handle shipping address updates
+      request.on('shippingaddresschange', (event) => {
+        // Update total amount or handle shipping address change logic if necessary
+        event.updateWith({ status: 'success' }); // Always mark as success for this example
       });
     }
   }, [stripe]);
