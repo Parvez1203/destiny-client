@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStripe, useElements, PaymentElement, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
 
 export default function CheckoutForm() {
@@ -7,7 +7,7 @@ export default function CheckoutForm() {
 
   const [message, setMessage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [productDetails, setProductDetails] = useState({
+  const [productDetails] = useState({
     name: 'Product Name', // Replace with your actual product name
     description: 'Product Description', // Replace with your product description
     amount: 2000, // Amount in cents
@@ -32,6 +32,16 @@ export default function CheckoutForm() {
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/completion`,
+        shipping: {
+          name: event.shipping.name,
+          address: {
+            line1: event.shipping.address.line1,
+            city: event.shipping.address.city,
+            state: event.shipping.address.state,
+            postal_code: event.shipping.address.postal_code,
+            country: event.shipping.address.country,
+          },
+        }, // Include shipping details from the payment request
       },
     });
 
