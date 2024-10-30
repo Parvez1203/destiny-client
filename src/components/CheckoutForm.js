@@ -1,52 +1,84 @@
-import { PaymentElement } from "@stripe/react-stripe-js";
-import { useState } from "react";
-import { useStripe, useElements } from "@stripe/react-stripe-js";
+import React, {useState, useEffect} from 'react';
+import {PaymentRequestButtonElement, useStripe} from '@stripe/react-stripe-js';
 
-export default function CheckoutForm() {
+const CheckoutForm = () => {
   const stripe = useStripe();
-  const elements = useElements();
+  const [paymentRequest, setPaymentRequest] = useState(null);
+  const [clientSecret, setClientSecret] = useState("");
 
-  const [message, setMessage] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  useEffect(() => {
+    if (stripe) {
+      const pr = stripe.paymentRequest({
+        country: 'US',
+        currency: 'usd',
+        total: {
+          label: 'Demo total',
+          amount: 1099,
+        },
+        requestPayerName: true,
+        requestPayerEmail: true,
+      });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      // Stripe.js has not yet loaded.
-      // Make sure to disable form submission until Stripe.js has loaded.
-      return;
+      // Check the availability of the Payment Request API.
+      pr.canMakePayment().then(result => {
+        if (result) {
+          setPaymentRequest(pr);
+        }
+      });
     }
+  }, [stripe]);
 
-    setIsProcessing(true);
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        // Make sure to change this to your payment completion page
-        return_url: `${window.location.origin}/completion`,
-      },
+  useEffect(() => {
+    // Fetch clientSecret for Payment Element
+    fetch("https://destiny-server-nhyk.onrender.com/create-payment-intent", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }).then(async (result) => {
+      const { clientSecret } = await result.json();
+      setClientSecret(clientSecret);
     });
+  }, []);
 
-    if (error.type === "card_error" || error.type === "validation_error") {
-      setMessage(error.message);
+  paymentRequest.on('paymentmethod', async (ev) => {
+    // Confirm the PaymentIntent without handling potential next actions (yet).
+    console.log(clientSecret);
+    
+    const {paymentIntent, error: confirmError} = await stripe.confirmCardPayment(
+      clientSecret,
+      {payment_method: ev.paymentMethod.id},
+      {handleActions: false}
+    );
+  
+    if (confirmError) {
+      // Report to the browser that the payment failed, prompting it to
+      // re-show the payment interface, or show an error message and close
+      // the payment interface.
+      ev.complete('fail');
     } else {
-      setMessage("An unexpected error occured.");
+      // Report to the browser that the confirmation was successful, prompting
+      // it to close the browser payment method collection interface.
+      ev.complete('success');
+      // Check if the PaymentIntent requires any actions and, if so, let Stripe.js
+      // handle the flow. If using an API version older than "2019-02-11"
+      // instead check for: `paymentIntent.status === "requires_source_action"`.
+      if (paymentIntent.status === "requires_action") {
+        // Let Stripe.js handle the rest of the payment flow.
+        const {error} = await stripe.confirmCardPayment(clientSecret);
+        if (error) {
+          // The payment failed -- ask your customer for a new payment method.
+        } else {
+          // The payment has succeeded -- show a success message to your customer.
+        }
+      } else {
+        // The payment has succeeded -- show a success message to your customer.
+      }
     }
+  });
 
-    setIsProcessing(false);
-  };
+  if (paymentRequest) {
+    return <PaymentRequestButtonElement options={{paymentRequest}} />
+  }
 
-  return (
-    <form id="payment-form" onSubmit={handleSubmit}>
-      <PaymentElement id="payment-element" />
-      <button disabled={isProcessing || !stripe || !elements} id="submit">
-        <span id="button-text">
-          {isProcessing ? "Processing ... " : "Pay now"}
-        </span>
-      </button>
-      {/* Show any error or success messages */}
-      {message && <div id="payment-message">{message}</div>}
-    </form>
-  );
+  // Use a traditional checkout form.
+  return 'Insert your form or button component here.';
 }
