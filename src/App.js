@@ -1,18 +1,20 @@
-import React from 'react';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
-import CheckoutForm from './components/CheckoutForm';
+import "./App.css";
+import Payment from "./components/Payment";
+import Completion from "./components/Completion";
 
-// Make sure to call `loadStripe` outside of a component’s render to avoid
-// recreating the `Stripe` object on every render.
-const stripePromise = loadStripe('pk_test_51QBRpFICvmtDwewB0gmIXj01IEfYCvQYUEenHW2tb8fRfKdKwmREn33Xf4ElmKaBGZuNxDwNROk8LONdXAZVxEvY00PDuF8jgW');
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-export default function App() {
+function App() {
   return (
-    <Elements stripe={stripePromise}>
-      <CheckoutForm />
-    </Elements>
+    <main>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Payment />} />
+          <Route path="/completion" element={<Completion />} />
+        </Routes>
+      </BrowserRouter>
+    </main>
   );
 }
 
-
+export default App;

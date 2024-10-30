@@ -1,118 +1,52 @@
-import React, { useEffect, useState } from 'react';
-import { useStripe, useElements, PaymentRequestButtonElement, CardElement } from '@stripe/react-stripe-js';
+import { PaymentElement } from "@stripe/react-stripe-js";
+import { useState } from "react";
+import { useStripe, useElements } from "@stripe/react-stripe-js";
 
-function CheckoutForm() {
+export default function CheckoutForm() {
   const stripe = useStripe();
   const elements = useElements();
-  const [paymentRequest, setPaymentRequest] = useState(null);
-  const [paymentRequestAvailable, setPaymentRequestAvailable] = useState(false);
 
-  useEffect(() => {
-    if (stripe) {
-      // Set up payment request
-      const pr = stripe.paymentRequest({
-        country: "US",
-        currency: "usd",
-        total: {
-          label: "Total",
-          amount: 2000, // Amount in cents
-        },
-        requestPayerName: true,
-        requestPayerEmail: true,
-        requestPayerPhone: true,
-        requestShipping: true,
-        // displayItems: [
-        //   { label: "Product 1", amount: 1000 },
-        //   { label: "Product 2", amount: 1000 },
-        // ],
-      });
+  const [message, setMessage] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-      // Add shipping options
-      pr.on("shippingaddresschange", (event) => {
-        const shippingOptions = [
-          { id: "free-shipping", label: "Free Shipping", detail: "5-7 days", amount: 0 },
-          { id: "express-shipping", label: "Express Shipping", detail: "2-3 days", amount: 500 },
-        ];
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        event.updateWith({ status: "success", shippingOptions });
-      });
-
-      pr.on('token', async (e) => {
-        try {
-          // Fetch client secret from your backend
-          const { clientSecret } = await fetch('http://localhost:8000/create-product-and-checkout-session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              paymentMethodType: 'card',
-              shipping: e.shippingAddress,
-              email: e.payerEmail,
-              product: {
-                name: 'botanical soda variety (18 pack)',
-                qty: '1',
-                description: 'The best drink for fall Halloween, Thanksgiving, and Fall will never be the same.',
-                price: 20,
-                currency: 'USD'
-              }
-            }),
-          }).then(r => r.json());
-          console.log(clientSecret);
-          
-          // Confirm payment with the retrieved client secret
-          const { error, paymentIntent } = await stripe.confirmCardPayment(
-            clientSecret,
-            { payment_method: e.paymentMethod.id }
-          );
-          console.log(paymentIntent);
-          console.log(e);
-          
-          if (error) {
-            console.error("Payment error:", error);
-            e.complete('fail'); // Notify failure to the payment request
-          } else {
-            e.complete('success'); // Complete the payment request process
-            
-            // // If additional actions are required (e.g., 3D Secure)
-            // if (paymentIntent.status === 'requires_action') {
-            //   await stripe.confirmCardPayment(clientSecret);
-            // }
-      
-            // Check if payment is successful
-            if (paymentIntent.status === 'succeeded') {
-              console.log("Payment successful!");
-            }
-          }
-        } catch (error) {
-          console.error("Error processing payment:", error);
-          e.complete('fail'); // Ensure fail is sent if an error occurs
-        }
-      });
-      
-
-      pr.canMakePayment().then((result) => {
-        if (result) {
-          setPaymentRequest(pr);
-          setPaymentRequestAvailable(true);
-        } else {
-          setPaymentRequestAvailable(false);
-        }
-      });
+    if (!stripe || !elements) {
+      // Stripe.js has not yet loaded.
+      // Make sure to disable form submission until Stripe.js has loaded.
+      return;
     }
-  }, [stripe]);
+
+    setIsProcessing(true);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        // Make sure to change this to your payment completion page
+        return_url: `${window.location.origin}/completion`,
+      },
+    });
+
+    if (error.type === "card_error" || error.type === "validation_error") {
+      setMessage(error.message);
+    } else {
+      setMessage("An unexpected error occured.");
+    }
+
+    setIsProcessing(false);
+  };
 
   return (
-    <div style={{
-margin:'20px'    // Rounded corners for a nice look
-}}>
-      {paymentRequestAvailable ? (
-        <PaymentRequestButtonElement options={{ paymentRequest }} />
-      ) : (
-        <p>Your wallet will load, Please be patient...</p>
-      )}
-    </div>
+    <form id="payment-form" onSubmit={handleSubmit}>
+      <PaymentElement id="payment-element" />
+      <button disabled={isProcessing || !stripe || !elements} id="submit">
+        <span id="button-text">
+          {isProcessing ? "Processing ... " : "Pay now"}
+        </span>
+      </button>
+      {/* Show any error or success messages */}
+      {message && <div id="payment-message">{message}</div>}
+    </form>
   );
 }
-
-export default CheckoutForm;
