@@ -15,8 +15,19 @@ const CheckoutForm = () => {
           label: 'Demo total',
           amount: 1099,
         },
-        requestPayerName: true,
-        requestPayerEmail: true,
+      
+        requestShipping: true,
+        // `shippingOptions` is optional at this point:
+        shippingOptions: [
+          // The first shipping option in this list appears as the default
+          // option in the browser payment interface.
+          {
+            id: 'free-shipping',
+            label: 'Free shipping',
+            detail: 'Arrives in 5 to 7 days',
+            amount: 0,
+          },
+        ],
       });
 
       pr.canMakePayment().then(result => {
@@ -52,6 +63,25 @@ const CheckoutForm = () => {
       });
     }
   }, [stripe, clientSecret]);
+
+  pr.on('shippingaddresschange', async (ev) => {
+    if (ev.shippingAddress.country !== 'US') {
+      ev.updateWith({status: 'invalid_shipping_address'});
+    } else {
+      // Perform server-side request to fetch shipping options
+      const response = await fetch('/calculateShipping', {
+        data: JSON.stringify({
+          shippingAddress: ev.shippingAddress
+        })
+      });
+      const result = await response.json();
+  
+      ev.updateWith({
+        status: 'success',
+        shippingOptions: result.supportedShippingOptions,
+      });
+    }
+  });
 
   useEffect(() => {
     fetch("https://destiny-server-nhyk.onrender.com/create-payment-intent", {
