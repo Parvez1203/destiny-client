@@ -28,7 +28,7 @@ function CheckoutForm() {
       });
 
       // Add shipping options
-      paymentRequest.on("shippingaddresschange", (event) => {
+      pr.on("shippingaddresschange", (event) => {
         const shippingOptions = [
           { id: "free-shipping", label: "Free Shipping", detail: "5-7 days", amount: 0 },
           { id: "express-shipping", label: "Express Shipping", detail: "2-3 days", amount: 500 },
@@ -106,7 +106,7 @@ margin:'20px'    // Rounded corners for a nice look
       {paymentRequestAvailable ? (
         <PaymentRequestButtonElement options={{ paymentRequest }} />
       ) : (
-        <p>Apple Pay is not available on this device.</p>
+        <p>Your wallet will load, Please be patient...</p>
       )}
     </div>
   );
