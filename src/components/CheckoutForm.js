@@ -9,6 +9,7 @@ function CheckoutForm() {
 
   useEffect(() => {
     if (stripe) {
+      // Set up payment request
       const pr = stripe.paymentRequest({
         country: "US",
         currency: "usd",
@@ -20,9 +21,13 @@ function CheckoutForm() {
         requestPayerEmail: true,
         requestPayerPhone: true,
         requestShipping: true,
+        // displayItems: [
+        //   { label: "Product 1", amount: 1000 },
+        //   { label: "Product 2", amount: 1000 },
+        // ],
       });
 
-      // Handle shipping address changes
+      // Add shipping options
       pr.on("shippingaddresschange", (event) => {
         const shippingOptions = [
           { id: "free-shipping", label: "Free Shipping", detail: "5-7 days", amount: 0 },
@@ -34,34 +39,47 @@ function CheckoutForm() {
 
       pr.on('token', async (e) => {
         try {
-          const { clientSecret } = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
+          // Fetch client secret from your backend
+          const { clientSecret } = await fetch('http://localhost:8000/create-product-and-checkout-session', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              paymentMethodType: e.paymentMethod.id,
+              paymentMethodType: 'card',
               shipping: e.shippingAddress,
               email: e.payerEmail,
               product: {
                 name: 'botanical soda variety (18 pack)',
                 qty: '1',
                 description: 'The best drink for fall Halloween, Thanksgiving, and Fall will never be the same.',
-                price: 20 * 100, // Price in cents
+                price: 20,
                 currency: 'USD'
               }
             }),
           }).then(r => r.json());
-
-          const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-            payment_method: e.paymentMethod.id,
-          });
-
+          console.log(clientSecret);
+          
+          // Confirm payment with the retrieved client secret
+          const { error, paymentIntent } = await stripe.confirmCardPayment(
+            clientSecret,
+            { payment_method: e.paymentMethod.id }
+          );
+          console.log(paymentIntent);
+          console.log(e);
+          
           if (error) {
             console.error("Payment error:", error);
-            e.complete('fail'); // Notify failure
+            e.complete('fail'); // Notify failure to the payment request
           } else {
-            e.complete('success'); // Complete the payment request
+            e.complete('success'); // Complete the payment request process
+            
+            // // If additional actions are required (e.g., 3D Secure)
+            // if (paymentIntent.status === 'requires_action') {
+            //   await stripe.confirmCardPayment(clientSecret);
+            // }
+      
+            // Check if payment is successful
             if (paymentIntent.status === 'succeeded') {
               console.log("Payment successful!");
             }
@@ -71,6 +89,7 @@ function CheckoutForm() {
           e.complete('fail'); // Ensure fail is sent if an error occurs
         }
       });
+      
 
       pr.canMakePayment().then((result) => {
         if (result) {
@@ -83,75 +102,14 @@ function CheckoutForm() {
     }
   }, [stripe]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!stripe || !elements) return;
-
-    const cardElement = elements.getElement(CardElement);
-
-    const { paymentMethod, error: paymentMethodError } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-      billing_details: {
-        name: 'Customer Name', // Replace with actual data if you collect it
-        email: 'customer@example.com', // Replace with actual data if you collect it
-      },
-    });
-
-    if (paymentMethodError) {
-      console.error("Error creating payment method:", paymentMethodError);
-      return; // Exit if there's an error
-    }
-
-    const { clientSecret } = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        paymentMethod: paymentMethod.id, // Send the payment method ID here
-        shipping: {
-          recipient: 'Customer', // Replace with actual data if you collect it
-          addressLine: ['123 Main St'],
-          city: 'Anytown',
-          region: 'CA',
-          postalCode: '12345',
-          countryCode: 'US'
-        },
-        email: 'customer@example.com',
-        product: {
-          name: 'botanical soda variety (18 pack)',
-          qty: '1',
-          description: 'The best drink for fall Halloween, Thanksgiving, and Fall will never be the same.',
-          price: 20 * 100, // Ensure price is in cents
-          currency: 'USD'
-        }
-      }),
-    }).then(r => r.json());
-
-    const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: paymentMethod.id,
-    });
-
-    if (confirmError) {
-      console.error("Payment error:", confirmError);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      console.log("Payment successful!");
-    }
-  };
-
   return (
-    <div style={{ margin: '20px' }}>
+    <div style={{
+margin:'20px'    // Rounded corners for a nice look
+}}>
       {paymentRequestAvailable ? (
         <PaymentRequestButtonElement options={{ paymentRequest }} />
       ) : (
-        <form onSubmit={handleSubmit}>
-          <CardElement />
-          <button type="submit" disabled={!stripe}>
-            Pay with Card
-          </button>
-        </form>
+        <p>Your wallet will load, Please be patient...</p>
       )}
     </div>
   );
