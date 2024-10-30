@@ -36,7 +36,7 @@ const CheckoutForm = () => {
 
           // Add the event listener once we know `pr` is supported
           pr.on('paymentmethod', async (ev) => {
-            console.log(clientSecret);
+
             const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
               clientSecret,
               { payment_method: ev.paymentMethod.id },
@@ -61,27 +61,28 @@ const CheckoutForm = () => {
           });
         }
       });
+
+      pr.on('shippingaddresschange', async (ev) => {
+        if (ev.shippingAddress.country !== 'US') {
+          ev.updateWith({status: 'invalid_shipping_address'});
+        } else {
+          // Perform server-side request to fetch shipping options
+          const response = await fetch('/calculateShipping', {
+            data: JSON.stringify({
+              shippingAddress: ev.shippingAddress
+            })
+          });
+          const result = await response.json();
+      
+          ev.updateWith({
+            status: 'success',
+            shippingOptions: result.supportedShippingOptions,
+          });
+        }
+      });
     }
   }, [stripe, clientSecret]);
 
-  pr.on('shippingaddresschange', async (ev) => {
-    if (ev.shippingAddress.country !== 'US') {
-      ev.updateWith({status: 'invalid_shipping_address'});
-    } else {
-      // Perform server-side request to fetch shipping options
-      const response = await fetch('/calculateShipping', {
-        data: JSON.stringify({
-          shippingAddress: ev.shippingAddress
-        })
-      });
-      const result = await response.json();
-  
-      ev.updateWith({
-        status: 'success',
-        shippingOptions: result.supportedShippingOptions,
-      });
-    }
-  });
 
   useEffect(() => {
     fetch("https://destiny-server-nhyk.onrender.com/create-payment-intent", {
