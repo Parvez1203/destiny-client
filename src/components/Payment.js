@@ -60,11 +60,10 @@ function Payment() {
   return (
     <>
       <h1>React Stripe and the Payment Element</h1>
-      <Elements stripe={stripePromise} options={{ clientSecret }}>
       {isPaymentRequestSupported && paymentRequest && (
         <PaymentRequestButtonElement options={{ paymentRequest }} />
       )}
-      </Elements>
+
       {/* {clientSecret && stripePromise && (
         <Elements stripe={stripePromise} options={{ clientSecret }}>
           <CheckoutForm />
