@@ -1,104 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { PaymentRequestButtonElement, useStripe } from '@stripe/react-stripe-js';
+import React, { useEffect, useState } from 'react';
+import { PaymentRequestButtonElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const CheckoutForm = () => {
   const stripe = useStripe();
+  const elements = useElements();
   const [paymentRequest, setPaymentRequest] = useState(null);
-  const [clientSecret, setClientSecret] = useState("");
 
   useEffect(() => {
     if (stripe) {
-      const pr = stripe.paymentRequest({
+      const request = stripe.paymentRequest({
         country: 'US',
         currency: 'usd',
         total: {
-          label: 'Demo total',
-          amount: 1099,
+          label: 'Total',
+          amount: 2000, // amount in cents
         },
-      
-        requestShipping: true,
-        // `shippingOptions` is optional at this point:
-        shippingOptions: [
-          // The first shipping option in this list appears as the default
-          // option in the browser payment interface.
-          {
-            id: 'free-shipping',
-            label: 'Free shipping',
-            detail: 'Arrives in 5 to 7 days',
-            amount: 0,
-          },
-        ],
+        requestPayerName: true,
+        requestPayerEmail: true,
       });
 
-      pr.canMakePayment().then(result => {
+      // Check if the Payment Request is supported
+      request.canMakePayment().then((result) => {
         if (result) {
-          setPaymentRequest(pr);
-
-          // Add the event listener once we know `pr` is supported
-          pr.on('paymentmethod', async (ev) => {
-
-            const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
-              clientSecret,
-              { payment_method: ev.paymentMethod.id },
-              { handleActions: false }
-            );
-
-            if (confirmError) {
-              ev.complete('fail');
-            } else {
-              ev.complete('success');
-              if (paymentIntent.status === "requires_action") {
-                const { error } = await stripe.confirmCardPayment(clientSecret);
-                if (error) {
-                  // Handle error
-                } else {
-                  // Payment succeeded
-                }
-              } else {
-                // Payment succeeded
-              }
-            }
-          });
+          setPaymentRequest(request);
+        } else {
+          console.error('Payment Request not supported');
         }
       });
 
-      pr.on('shippingaddresschange', async (ev) => {
-        if (ev.shippingAddress.country !== 'US') {
-          ev.updateWith({status: 'invalid_shipping_address'});
-        } else {
-          // Perform server-side request to fetch shipping options
-          const response = await fetch('/calculateShipping', {
-            data: JSON.stringify({
-              shippingAddress: ev.shippingAddress
-            })
-          });
-          const result = await response.json();
-      
-          ev.updateWith({
-            status: 'success',
-            shippingOptions: result.supportedShippingOptions,
-          });
-        }
+      request.on('token', async (event) => {
+        // Send the token to your server for processing
+        const { token } = event;
+        // Example API call
+        await fetch('https://destiny-server-nhyk.onrender.com/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: token.id }),
+        });
+        
+        // Complete the payment
+        event.complete('success');
       });
     }
-  }, [stripe, clientSecret]);
+  }, [stripe]);
 
-
-  useEffect(() => {
-    fetch("https://destiny-server-nhyk.onrender.com/create-payment-intent", {
-      method: "POST",
-      body: JSON.stringify({}),
-    }).then(async (result) => {
-      const { clientSecret } = await result.json();
-      setClientSecret(clientSecret);
-    });
-  }, []);
-
-  if (paymentRequest) {
-    return <PaymentRequestButtonElement options={{ paymentRequest }} />;
-  }
-
-  return 'Insert your form or button component here.';
+  return (
+    <div>
+      {paymentRequest && (
+        <PaymentRequestButtonElement options={{ paymentRequest }} />
+      )}
+    </div>
+  );
 };
 
 export default CheckoutForm;
