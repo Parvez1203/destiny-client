@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useStripe, useElements, PaymentRequestButtonElement } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentRequestButtonElement, CardElement } from '@stripe/react-stripe-js';
 
 function CheckoutForm() {
   const stripe = useStripe();
@@ -21,10 +21,10 @@ function CheckoutForm() {
         requestPayerEmail: true,
         requestPayerPhone: true,
         requestShipping: true,
-        displayItems: [
-          { label: "Product 1", amount: 1000 },
-          { label: "Product 2", amount: 1000 },
-        ],
+        // displayItems: [
+        //   { label: "Product 1", amount: 1000 },
+        //   { label: "Product 2", amount: 1000 },
+        // ],
       });
 
       // Add shipping options
@@ -99,14 +99,67 @@ function CheckoutForm() {
     }
   }, [stripe]);
 
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) return;
+
+    const cardElement = elements.getElement(CardElement);
+
+    const { clientSecret } = await fetch('https://destiny-server-nhyk.onrender.com/create-product-and-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        paymentMethodType: 'card',
+        shipping: {
+          recipient: 'Customer',  // Replace with actual data if you collect it
+          addressLine: ['123 Main St'],
+          city: 'Anytown',
+          region: 'CA',
+          postalCode: '12345',
+          countryCode: 'US'
+        },
+        email: 'customer@example.com',
+        product: {
+          name: 'botanical soda variety (18 pack)',
+          qty: '1',
+          description: 'The best drink for fall Halloween, Thanksgiving, and Fall will never be the same.',
+          price: 20,
+          currency: 'USD'
+        }
+      }),
+    }).then(r => r.json());
+
+    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: {
+          name: 'Customer Name', // Replace with actual data if you collect it
+          email: 'customer@example.com', // Replace with actual data if you collect it
+        },
+      },
+    });
+
+    if (error) {
+      console.error("Payment error:", error);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      console.log("Payment successful!");
+    }
+  };
+
   return (
-    <div style={{
-margin:'20px'    // Rounded corners for a nice look
-}}>
+    <div style={{ margin: '20px' }}>
       {paymentRequestAvailable ? (
         <PaymentRequestButtonElement options={{ paymentRequest }} />
       ) : (
-        <p>Your wallet will load, Please be patient...</p>
+        <form onSubmit={handleSubmit}>
+          <CardElement />
+          <button type="submit" disabled={!stripe}>
+            Pay with Card
+          </button>
+        </form>
       )}
     </div>
   );
