@@ -82,3 +82,5 @@ const CheckoutForm = () => {
   // Use a traditional checkout form.
   return 'Insert your form or button component here.';
 }
+
+export default CheckoutForm;
