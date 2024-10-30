@@ -19,7 +19,7 @@ const CheckoutForm = () => {
         },
         requestPayerName: true,
         requestPayerEmail: true,
-        requestShipping: true, // Request shipping details
+        // requestShipping: true, // Request shipping details
       });
 
       // Check if the Payment Request is supported
