@@ -46,7 +46,7 @@ function CheckoutForm() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              paymentMethodType: 'card',
+              paymentMethodType: e.paymentMethod.id,
               shipping: e.shippingAddress,
               email: e.payerEmail,
               product: {
